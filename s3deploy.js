@@ -83,7 +83,7 @@ module.exports = async (options, api) => {
         let fileKey = pwaFiles[i]
         try {
           logWithSpinner(`Setting Cache-Control (${i + 1}/${pwaFiles.length}): ${fileKey}`)
-          await setCacheControl(options.bucket, fileKey)
+          await setCacheControl(options.bucket, fileKey, options.publicReadFiles)
           stopSpinner()
         } catch (e) {
           error(`Setting Cache-Control failed: ${fileKey}`)
@@ -99,7 +99,7 @@ module.exports = async (options, api) => {
     return mime.lookup(filename) || 'application/octet-stream'
   }
 
-  async function setCacheControl (bucket, fileKey) {
+  async function setCacheControl (bucket, fileKey, publicReadFiles) {
     // Copies in-place while updating the metadata.
     let params = {
       CopySource: `${bucket}/${fileKey}`,
@@ -109,6 +109,11 @@ module.exports = async (options, api) => {
       ContentType: contentTypeFor(fileKey),
       MetadataDirective: 'REPLACE'
     }
+
+    if (publicReadFiles) {
+      params['ACL'] = 'public-read'
+    }
+
     return new Promise((resolve, reject) => {
       s3.copyObject(params, function (err, data) {
         if (err) {
